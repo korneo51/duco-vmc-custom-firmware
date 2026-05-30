@@ -17,3 +17,4 @@
 - [x] JSON MQTT complet francise sur `duco-vmc/state`
 - [x] Commandes kokx pertinentes ajoutees : modes longs, serial, filtre restant, temps restant mode
 - [x] PR upstream ouverte chez kokx pour partager la commande bypass `0x100A`
+- [x] Repo public `korneo51/duco-vmc-custom-firmware` publie avec configuration anonymisee
