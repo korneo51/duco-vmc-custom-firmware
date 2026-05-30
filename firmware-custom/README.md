@@ -1,6 +1,8 @@
 # Firmware custom Duco VMC - ESP32 sans ESPHome
 
-Firmware Arduino/PlatformIO autonome pour la DucoBox Energy Comfort 350.
+Firmware Arduino/PlatformIO autonome pour domotiser une DucoBox Energy Comfort
+via un ESP32 connecte au bus UART interne. Il fournit une interface web locale,
+une API HTTP, du MQTT et une regulation automatique de free-cooling.
 
 - Wi-Fi en mode station, mDNS `duco-vmc.local`
 - OTA Arduino pour les uploads suivants
@@ -14,7 +16,7 @@ Firmware Arduino/PlatformIO autonome pour la DucoBox Energy Comfort 350.
 firmware-custom/
 |-- platformio.ini
 |-- src/
-|   |-- config.h      Wi-Fi, MQTT, mots de passe web/OTA
+|   |-- config.h      Wi-Fi, MQTT, mot de passe OTA
 |   |-- main.cpp      Wi-Fi, OTA, MQTT, HTTP, limites d'ecriture
 |   |-- duco.h        API protocole Duco
 |   |-- duco.cpp      implementation UART Duco
@@ -45,7 +47,8 @@ Avant de flasher, remplacer les valeurs `CHANGE_ME_*` dans `src/config.h`.
 
 L'interface web locale est accessible sans authentification HTTP.
 
-La page affiche :
+Elle est pensee comme un tableau de bord de pilotage local, utile meme sans
+Jeedom/Home Assistant. La page affiche :
 
 - etat bus online/offline
 - mode ventilation courant et commande de changement
@@ -108,6 +111,10 @@ Comportement principal :
 
 La regulation est desactivee par defaut au premier flash, puis son etat est
 stocke en NVS.
+
+Le diagnostic de regulation est expose dans l'interface web, l'API et MQTT :
+etat actif/repos, pause manuelle, prevision du lendemain et raison de la
+decision courante.
 
 ## API HTTP
 

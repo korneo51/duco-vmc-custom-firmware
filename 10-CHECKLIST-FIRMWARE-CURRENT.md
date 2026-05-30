@@ -18,3 +18,4 @@
 - [x] Commandes kokx pertinentes ajoutees : modes longs, serial, filtre restant, temps restant mode
 - [x] PR upstream ouverte chez kokx pour partager la commande bypass `0x100A`
 - [x] Repo public `korneo51/duco-vmc-custom-firmware` publie avec configuration anonymisee
+- [x] README public recentre sur la domotisation, l'interface web et la regulation auto
