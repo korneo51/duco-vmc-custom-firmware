@@ -1,0 +1,201 @@
+# =============================================================================
+# Firmware ESPHome pour la DucoBox Energy Comfort 350
+# Bidouille UART directe sur le connecteur 12 broches (sans Connectivity Board)
+# =============================================================================
+# Pre-requis : ESP32 DevKit, brochage selon 03-BRANCHEMENT.md
+# Composant : duco par kokx (PR esphome/esphome#7993, pas encore en stable)
+# =============================================================================
+
+esphome:
+  name: duco-vmc
+  friendly_name: Duco VMC
+
+esp32:
+  board: esp32dev
+  framework:
+    type: arduino
+
+# -----------------------------------------------------------------------------
+# Composant Duco (depuis le fork de kokx tant que la PR n'est pas mergée)
+# Vérifier le nom de la branche au moment où tu lis :
+#   https://github.com/esphome/esphome/pull/7993
+# -----------------------------------------------------------------------------
+external_components:
+  - source:
+      type: git
+      url: https://github.com/kokx/esphome
+      ref: duco-component
+    components: [duco]
+
+# -----------------------------------------------------------------------------
+# Wi-Fi
+# -----------------------------------------------------------------------------
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  # Réseau de secours si la connexion principale échoue
+  ap:
+    ssid: "Duco Fallback"
+    password: !secret fallback_password
+
+captive_portal:
+
+# -----------------------------------------------------------------------------
+# Logs, API native ESPHome, OTA
+# -----------------------------------------------------------------------------
+logger:
+  level: INFO
+
+api:
+  encryption:
+    key: !secret api_key
+
+ota:
+  - platform: esphome
+    password: !secret ota_password
+
+# -----------------------------------------------------------------------------
+# Horloge réseau (utilisée par le composant duco)
+# -----------------------------------------------------------------------------
+time:
+  - platform: sntp
+    id: sntp_time
+    timezone: Europe/Paris
+
+# -----------------------------------------------------------------------------
+# UART2 sur GPIO16 (RX) et GPIO17 (TX), 57600 bauds, 8N1
+# C'est le bus interne du DucoBox tel que documenté par kokx
+# -----------------------------------------------------------------------------
+uart:
+  id: duco_uart
+  tx_pin: GPIO17
+  rx_pin: GPIO16
+  baud_rate: 57600
+  data_bits: 8
+  parity: NONE
+  stop_bits: 1
+
+# -----------------------------------------------------------------------------
+# Composant Duco principal
+# discovery: {} active la découverte automatique des nœuds au démarrage
+# -----------------------------------------------------------------------------
+duco:
+  uart_id: duco_uart
+  discovery: {}
+  time:
+    time_id: sntp_time
+
+# -----------------------------------------------------------------------------
+# Numéro de série de la box (sanity check au démarrage)
+# -----------------------------------------------------------------------------
+text_sensor:
+  - platform: duco
+    name: "Duco Serial Number"
+
+# -----------------------------------------------------------------------------
+# Mode de ventilation — lecture + écriture
+# Valeurs : Auto, Manual 1/2/3, Permanent 1/2/3, Not at home
+# -----------------------------------------------------------------------------
+select:
+  - platform: duco
+    name: "Duco Mode"
+
+# -----------------------------------------------------------------------------
+# Capteurs — lecture
+# -----------------------------------------------------------------------------
+sensor:
+  - platform: duco
+    # ----- Températures internes (les 4 sondes de la box) -----
+    temperature_oda:
+      name: "Duco Temp ODA"              # air extérieur entrant
+      id: t_oda
+    temperature_sup:
+      name: "Duco Temp SUP"              # air soufflé dans les pièces
+      id: t_sup
+    temperature_eta:
+      name: "Duco Temp ETA"              # air extrait des pièces (≈ intérieur)
+      id: t_eta
+    temperature_eha:
+      name: "Duco Temp EHA"              # air rejeté à l'extérieur
+      id: t_eha
+
+    # ----- État du bypass -----
+    bypass:
+      name: "Duco Bypass"
+      id: duco_bypass
+
+    # ----- Système -----
+    flow_level:
+      name: "Duco Flow Level"
+    time_remaining:
+      name: "Duco Mode Time Remaining"
+    filter_remaining:
+      name: "Duco Filter Remaining"
+
+    # ----- Capteurs CO2 (à activer selon ce qui ressort de la découverte) -----
+    # Décommente et ajuste les `address:` selon les logs au premier boot.
+    # Exemple : si la découverte affiche
+    #   Node 3: type 12 (UCCO2) et Node 4: type 12 (UCCO2)
+    # alors :
+    #
+    # co2:
+    #   - address: 3
+    #     name: "Duco CO2 Chambre"
+    #   - address: 4
+    #     name: "Duco CO2 Salon"
+
+    # ----- Capteurs température sur les sensors externes -----
+    # Les capteurs CO2 et RH externes embarquent aussi un thermomètre.
+    #
+    # temperature:
+    #   - address: 3
+    #     name: "Duco Temp Chambre"
+    #   - address: 4
+    #     name: "Duco Temp Salon"
+
+    # ----- Capteurs humidité -----
+    # Si tu as des Humidity Room Sensors (type 10 dans la découverte) :
+    #
+    # humidity:
+    #   - address: 2
+    #     name: "Duco RH Salle de bain"
+
+  # ----- Capteurs dérivés (utiles pour scénarios Jeedom) -----
+  # Delta ETA-ODA : positif = potentiel de free-cooling, négatif = pas la peine
+  - platform: template
+    name: "Duco Delta ETA-ODA"
+    id: delta_eta_oda
+    unit_of_measurement: °C
+    update_interval: 30s
+    lambda: |-
+      return id(t_eta).state - id(t_oda).state;
+
+  # Rendement de l'échangeur (qualitatif, valide si bypass fermé)
+  - platform: template
+    name: "Duco Rendement Echangeur"
+    unit_of_measurement: "%"
+    update_interval: 60s
+    lambda: |-
+      float den = id(t_eta).state - id(t_oda).state;
+      if (den == 0) return 0;
+      return ((id(t_sup).state - id(t_oda).state) / den) * 100.0;
+
+# -----------------------------------------------------------------------------
+# Consigne confort — lecture + écriture
+# C'est CE paramètre que Jeedom va manipuler pour forcer l'ouverture du bypass
+# -----------------------------------------------------------------------------
+number:
+  - platform: duco
+    name: "Duco Consigne Confort"
+
+# -----------------------------------------------------------------------------
+# MQTT — pour Jeedom (voir 05-JEEDOM.md)
+# Décommenter et configurer une fois que l'install MQTT côté Jeedom est prête
+# -----------------------------------------------------------------------------
+# mqtt:
+#   broker: 192.168.1.10            # IP de ton broker (mosquitto / jMQTT)
+#   port: 1883
+#   username: duco
+#   password: !secret mqtt_password
+#   discovery: true                 # auto-découverte côté Jeedom (jMQTT)
+#   topic_prefix: duco-vmc

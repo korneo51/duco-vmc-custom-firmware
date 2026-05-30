@@ -1,0 +1,10 @@
+.pio/
+.vscode/
+firmware-custom/.pio/
+firmware-custom/.vscode/
+secrets.yaml
+*.bin
+*.elf
+*.map
+*.log
+compile_commands.json
