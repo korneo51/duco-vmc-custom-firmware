@@ -104,8 +104,12 @@ La regulation auto utilise :
 Comportement principal :
 
 - si demain est chaud et que l'exterieur est assez plus frais que l'interieur,
-  le bypass passe en ouverture forcee et la ventilation en Puissance 2 ou 3
+  le bypass passe en ouverture forcee et la ventilation en Puissance 2 ou 3 ;
+  l'ouverture forcee ne demarre que si l'exterieur est au moins 3.0 degC plus
+  froid que l'interieur
 - si l'exterieur est trop chaud pendant un besoin de froid, le bypass est ferme
+- si le besoin de froid existe mais que l'exterieur n'est pas au moins 3.0 degC
+  plus froid que l'interieur, le bypass est force ferme
 - en hiver ou hors besoin de froid, la regulation evite de perdre la chaleur
 - toute commande manuelle mode/consigne/bypass met l'auto en pause 2 h
 

@@ -19,3 +19,4 @@
 - [x] PR upstream ouverte chez kokx pour partager la commande bypass `0x100A`
 - [x] Repo public `korneo51/duco-vmc-custom-firmware` publie avec configuration anonymisee
 - [x] README public recentre sur la domotisation, l'interface web et la regulation auto
+- [x] Hostname Wi-Fi dedie `ESP32-Duco`, IP statique `192.168.10.21`, seuil bypass auto `3.0 degC`

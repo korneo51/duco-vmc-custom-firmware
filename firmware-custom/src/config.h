@@ -10,8 +10,8 @@
 // Optionnel : IP statique. À utiliser seulement si le SSID est bien sur le
 // même LAN que Jeedom/MQTT. Si le DHCP donne 192.168.28.x, corriger d'abord
 // le réseau Wi-Fi/VLAN côté routeur ou point d'accès.
-#define WIFI_USE_STATIC_IP 0
-#define WIFI_STATIC_IP     IPAddress(192, 168, 10, 201)
+#define WIFI_USE_STATIC_IP 1
+#define WIFI_STATIC_IP     IPAddress(192, 168, 10, 21)
 #define WIFI_GATEWAY       IPAddress(192, 168, 10, 1)
 #define WIFI_SUBNET        IPAddress(255, 255, 255, 0)
 #define WIFI_DNS1          IPAddress(192, 168, 10, 1)
@@ -19,6 +19,7 @@
 
 // ----- Identité réseau -----
 #define DEVICE_HOSTNAME "duco-vmc"
+#define WIFI_HOSTNAME   "ESP32-Duco"
 #define OTA_PASSWORD    "CHANGE_ME_OTA_PASSWORD"   // mot de passe OTA
 
 // ----- MQTT -----

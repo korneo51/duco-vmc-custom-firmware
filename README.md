@@ -64,9 +64,12 @@ Principe :
 
 - si demain s'annonce chaud et que l'air exterieur est plus frais que
   l'interieur, le firmware force le bypass ouvert et augmente la ventilation
-  pour charger le batiment en fraicheur ;
+  pour charger le batiment en fraicheur ; l'ouverture forcee exige maintenant
+  au moins 3.0 degC d'ecart entre interieur et exterieur ;
 - si l'exterieur devient trop chaud, il ferme le bypass pour eviter de faire
   entrer de la chaleur ;
+- si le delta interieur/exterieur est inferieur a 3.0 degC pendant un besoin de
+  froid, il garde le bypass ferme ;
 - en periode froide ou sans besoin de refroidissement, il laisse la Duco en mode
   auto ou ferme le bypass pour conserver la chaleur ;
 - une commande manuelle de mode, consigne ou bypass met la regulation en pause

@@ -53,8 +53,8 @@ static constexpr uint32_t AUTO_MIN_WRITE_INTERVAL_MS = 10UL * 60UL * 1000UL;
 static constexpr uint32_t MANUAL_OVERRIDE_MS = 2UL * 60UL * 60UL * 1000UL;
 static constexpr float TOMORROW_HOT_MARGIN_C = 2.0f;
 static constexpr float NEED_COOLING_MARGIN_C = 1.0f;
-static constexpr float GOOD_DELTA_C = 1.5f;
-static constexpr float STRONG_DELTA_C = 3.0f;
+static constexpr float GOOD_DELTA_C = 3.0f;
+static constexpr float STRONG_DELTA_C = 5.0f;
 static constexpr float MIN_INTERIOR_COOLING_C = 16.0f;
 static constexpr float MIN_OUTSIDE_COOLING_C = 8.0f;
 
@@ -422,6 +422,12 @@ void evaluateAutoRegulation(bool allowWrites) {
         shouldControl = true;
         autoRegulationAction = "heat_protection";
         autoRegulationReason = "Exterieur trop chaud";
+    } else if (needCooling && !goodDelta) {
+        targetBypass = DUCO_BYPASS_MODE_SHUT;
+        targetMode = DUCO_MODE_AUTO;
+        shouldControl = true;
+        autoRegulationAction = "insufficient_delta";
+        autoRegulationReason = "Delta inferieur a 3.0C";
     } else if (!tomorrowHot && duco.tempEta <= duco.comfortTemp + 0.5f &&
                duco.tempOda <= duco.comfortTemp - 2.0f) {
         targetBypass = DUCO_BYPASS_MODE_SHUT;
@@ -883,7 +889,7 @@ void setup() {
 
     // ----- Wi-Fi -----
     WiFi.mode(WIFI_STA);
-    WiFi.setHostname(DEVICE_HOSTNAME);
+    WiFi.setHostname(WIFI_HOSTNAME);
 #if WIFI_USE_STATIC_IP
     if (!WiFi.config(WIFI_STATIC_IP, WIFI_GATEWAY, WIFI_SUBNET, WIFI_DNS1, WIFI_DNS2)) {
         Serial.println("[WiFi] static IP config FAIL");
