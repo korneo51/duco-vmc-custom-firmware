@@ -12,9 +12,9 @@
 // le réseau Wi-Fi/VLAN côté routeur ou point d'accès.
 #define WIFI_USE_STATIC_IP 1
 #define WIFI_STATIC_IP     IPAddress(192, 168, 10, 21)
-#define WIFI_GATEWAY       IPAddress(192, 168, 10, 1)
+#define WIFI_GATEWAY       IPAddress(192, 168, 10, 254)
 #define WIFI_SUBNET        IPAddress(255, 255, 255, 0)
-#define WIFI_DNS1          IPAddress(192, 168, 10, 1)
+#define WIFI_DNS1          IPAddress(192, 168, 10, 254)
 #define WIFI_DNS2          IPAddress(1, 1, 1, 1)
 
 // ----- Identité réseau -----
