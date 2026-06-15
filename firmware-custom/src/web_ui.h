@@ -81,6 +81,16 @@ static const char INDEX_HTML[] PROGMEM = R"HTML(
     background: var(--accent-2);
     box-shadow: 0 0 0 3px rgba(137, 210, 122, 0.12);
   }
+  .header-button {
+    min-height: 30px;
+    padding: 0 11px;
+    color: var(--text);
+    background: var(--panel-2);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    font-size: 0.9rem;
+    font-weight: 760;
+  }
   .layout {
     display: grid;
     grid-template-columns: minmax(0, 1.28fr) minmax(320px, 0.72fr);
@@ -294,6 +304,51 @@ static const char INDEX_HTML[] PROGMEM = R"HTML(
   footer span {
     font-variant-numeric: tabular-nums;
   }
+  .settings-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 20;
+    display: flex;
+    justify-content: flex-end;
+    background: rgba(0, 0, 0, 0.48);
+  }
+  .settings-overlay[hidden] {
+    display: none;
+  }
+  .settings-panel {
+    width: min(460px, 100%);
+    height: 100%;
+    overflow-y: auto;
+    padding: 18px;
+    background: var(--bg);
+    border-left: 1px solid var(--line);
+    box-shadow: -18px 0 40px rgba(0, 0, 0, 0.32);
+  }
+  .settings-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 14px;
+  }
+  .settings-head h2 {
+    margin: 0;
+    color: var(--text);
+    font-size: 1.08rem;
+  }
+  .settings-panel section {
+    margin-bottom: 14px;
+  }
+  .limit-list {
+    display: grid;
+    gap: 9px;
+    color: var(--muted);
+    font-size: 0.9rem;
+  }
+  .limit-list strong {
+    color: var(--text);
+    font-variant-numeric: tabular-nums;
+  }
   @media (max-width: 780px) {
     main { padding: 14px; }
     header {
@@ -312,6 +367,10 @@ static const char INDEX_HTML[] PROGMEM = R"HTML(
     section { padding: 14px; }
     .temp-title { padding: 14px 14px 0; }
     .schema-wrap { padding: 6px 4px 8px; }
+    .settings-panel {
+      width: 100%;
+      border-left: 0;
+    }
   }
 </style>
 </head>
@@ -322,6 +381,7 @@ static const char INDEX_HTML[] PROGMEM = R"HTML(
     <div class="header-meta">
       <span id="bus_pill" class="bus-pill"><span id="bus_dot" class="dot"></span>Bus: <span id="online">...</span></span>
       <span>Mise à jour <span id="last">jamais</span></span>
+      <button class="header-button" data-no-disable="1" onclick="openSettings()">Paramètres</button>
     </div>
   </header>
 
@@ -417,14 +477,16 @@ static const char INDEX_HTML[] PROGMEM = R"HTML(
         </div>
       </section>
 
-      <section>
-        <h2>Système</h2>
-        <div class="metric-grid">
-          <div class="metric wide"><span>Numéro série</span><strong id="serial">...</strong></div>
-          <div class="metric"><span>Filtre restant</span><strong id="filter_remaining">...</strong></div>
-          <div class="metric"><span>Temps mode</span><strong id="mode_time_remaining">...</strong></div>
-        </div>
-      </section>
+      <div id="status" class="status"></div>
+    </div>
+  </div>
+
+  <div id="settings_overlay" class="settings-overlay" hidden onclick="closeSettingsOnBackdrop(event)">
+    <aside class="settings-panel" role="dialog" aria-modal="true" aria-labelledby="settings_title">
+      <div class="settings-head">
+        <h2 id="settings_title">Paramètres</h2>
+        <button class="secondary header-button" data-no-disable="1" onclick="closeSettings()">Fermer</button>
+      </div>
 
       <section>
         <h2>Régulation auto</h2>
@@ -445,8 +507,25 @@ static const char INDEX_HTML[] PROGMEM = R"HTML(
         </div>
       </section>
 
-      <div id="status" class="status"></div>
-    </div>
+      <section>
+        <h2>Système</h2>
+        <div class="metric-grid">
+          <div class="metric wide"><span>Numéro série</span><strong id="serial">...</strong></div>
+          <div class="metric"><span>Filtre restant</span><strong id="filter_remaining">...</strong></div>
+          <div class="metric"><span>Temps mode</span><strong id="mode_time_remaining">...</strong></div>
+        </div>
+      </section>
+
+      <section>
+        <h2>Limites d'écriture</h2>
+        <div class="limit-list">
+          <div>Écritures Duco: <strong><span id="settings_writes_today">-</span>/<span id="settings_write_limit">-</span></strong></div>
+          <div>Restant aujourd'hui: <strong id="settings_writes_remaining">-</strong></div>
+          <div>Intervalle minimum: <strong id="settings_write_interval">-</strong></div>
+          <div>Horloge: <strong id="settings_write_clock">-</strong></div>
+        </div>
+      </section>
+    </aside>
   </div>
 
   <footer>
@@ -529,7 +608,22 @@ function setStatus(text, level) {
 }
 
 function setButtonsDisabled(disabled) {
-  document.querySelectorAll("button").forEach(btn => btn.disabled = disabled);
+  document.querySelectorAll("button").forEach(btn => {
+    if (btn.dataset.noDisable === "1") return;
+    btn.disabled = disabled;
+  });
+}
+
+function openSettings() {
+  $("settings_overlay").hidden = false;
+}
+
+function closeSettings() {
+  $("settings_overlay").hidden = true;
+}
+
+function closeSettingsOnBackdrop(event) {
+  if (event.target && event.target.id === "settings_overlay") closeSettings();
 }
 
 function setBusState(online) {
@@ -579,6 +673,11 @@ async function refresh() {
     $("writes_remaining").textContent = s.writes_remaining;
     $("write_interval").textContent = (s.write_min_interval_ms / 1000).toFixed(0) + " s";
     $("write_clock").textContent = s.write_clock_synced ? "synchronisée" : "non synchronisée";
+    $("settings_writes_today").textContent = s.writes_today;
+    $("settings_write_limit").textContent = s.write_limit_per_day;
+    $("settings_writes_remaining").textContent = s.writes_remaining;
+    $("settings_write_interval").textContent = (s.write_min_interval_ms / 1000).toFixed(0) + " s";
+    $("settings_write_clock").textContent = s.write_clock_synced ? "synchronisée" : "non synchronisée";
 
     $("auto_enabled").textContent = s.auto_regulation_enabled ? "oui" : "non";
     $("auto_enabled").className = "state-pill " + (s.auto_regulation_enabled ? "state-power" : "state-away");
