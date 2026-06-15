@@ -537,9 +537,15 @@ void evaluateAutoRegulation(bool allowWrites) {
     bool modeDiff = duco.currentMode != targetMode;
     if (!bypassDiff && !modeDiff) return;
 
-    if (lastAutoWriteDecisionMs != 0 &&
-        millis() - lastAutoWriteDecisionMs < minutesToMs(autoWriteCooldownMin)) {
+    bool cooldownActive = lastAutoWriteDecisionMs != 0 &&
+        millis() - lastAutoWriteDecisionMs < minutesToMs(autoWriteCooldownMin);
+    if (cooldownActive) {
         autoRegulationReason += ", attente cooldown";
+    }
+
+    if (!allowWrites) return;
+
+    if (cooldownActive) {
         return;
     }
 
@@ -1061,6 +1067,8 @@ void setupWeb() {
             forecastOk = false;
             forecastError = "refresh en attente";
         }
+        lastAutoWriteDecisionMs = 0;
+        pollNowRequested = true;
         evaluateAutoRegulation(false);
         req->send(200, "text/plain", "OK");
     });

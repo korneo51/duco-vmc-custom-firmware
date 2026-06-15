@@ -22,3 +22,4 @@
 - [x] Hostname Wi-Fi dedie `ESP32-Duco`, IP statique `192.168.10.21`, seuil bypass auto `3.0 degC`
 - [x] Gateway/DNS ESP corriges vers la box `192.168.10.254` pour Open-Meteo
 - [x] Menu Parametres ajoute avec reglages auto persistants, systeme et limites d'ecriture
+- [x] Sauvegarde des reglages auto relance une decision et expose le cooldown dans le diagnostic
