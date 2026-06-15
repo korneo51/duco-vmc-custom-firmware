@@ -21,4 +21,4 @@
 - [x] README public recentre sur la domotisation, l'interface web et la regulation auto
 - [x] Hostname Wi-Fi dedie `ESP32-Duco`, IP statique `192.168.10.21`, seuil bypass auto `3.0 degC`
 - [x] Gateway/DNS ESP corriges vers la box `192.168.10.254` pour Open-Meteo
-- [x] Menu Parametres ajoute dans l'interface web pour regulation, systeme et limites d'ecriture
+- [x] Menu Parametres ajoute avec reglages auto persistants, systeme et limites d'ecriture

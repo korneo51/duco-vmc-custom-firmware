@@ -46,17 +46,29 @@ uint32_t lastDucoWriteMs = 0;
 bool     writeClockSynced = false;
 
 // Regulation auto free-cooling.
-static constexpr float WEATHER_LAT = 48.9567f;
-static constexpr float WEATHER_LON = 4.3631f;
-static constexpr uint32_t WEATHER_REFRESH_MS = 6UL * 60UL * 60UL * 1000UL;
-static constexpr uint32_t AUTO_MIN_WRITE_INTERVAL_MS = 10UL * 60UL * 1000UL;
-static constexpr uint32_t MANUAL_OVERRIDE_MS = 2UL * 60UL * 60UL * 1000UL;
-static constexpr float TOMORROW_HOT_MARGIN_C = 2.0f;
-static constexpr float NEED_COOLING_MARGIN_C = 1.0f;
-static constexpr float GOOD_DELTA_C = 3.0f;
-static constexpr float STRONG_DELTA_C = 5.0f;
-static constexpr float MIN_INTERIOR_COOLING_C = 16.0f;
-static constexpr float MIN_OUTSIDE_COOLING_C = 8.0f;
+static constexpr float DEFAULT_WEATHER_LAT = 48.9567f;
+static constexpr float DEFAULT_WEATHER_LON = 4.3631f;
+static constexpr uint16_t DEFAULT_WEATHER_REFRESH_MIN = 360;
+static constexpr uint16_t DEFAULT_AUTO_WRITE_COOLDOWN_MIN = 10;
+static constexpr uint16_t DEFAULT_MANUAL_OVERRIDE_MIN = 120;
+static constexpr float DEFAULT_TOMORROW_HOT_MARGIN_C = 2.0f;
+static constexpr float DEFAULT_NEED_COOLING_MARGIN_C = 1.0f;
+static constexpr float DEFAULT_GOOD_DELTA_C = 3.0f;
+static constexpr float DEFAULT_STRONG_DELTA_C = 5.0f;
+static constexpr float DEFAULT_MIN_INTERIOR_COOLING_C = 16.0f;
+static constexpr float DEFAULT_MIN_OUTSIDE_COOLING_C = 8.0f;
+
+float    autoWeatherLat = DEFAULT_WEATHER_LAT;
+float    autoWeatherLon = DEFAULT_WEATHER_LON;
+uint16_t autoWeatherRefreshMin = DEFAULT_WEATHER_REFRESH_MIN;
+uint16_t autoWriteCooldownMin = DEFAULT_AUTO_WRITE_COOLDOWN_MIN;
+uint16_t autoManualOverrideMin = DEFAULT_MANUAL_OVERRIDE_MIN;
+float    autoTomorrowHotMarginC = DEFAULT_TOMORROW_HOT_MARGIN_C;
+float    autoNeedCoolingMarginC = DEFAULT_NEED_COOLING_MARGIN_C;
+float    autoGoodDeltaC = DEFAULT_GOOD_DELTA_C;
+float    autoStrongDeltaC = DEFAULT_STRONG_DELTA_C;
+float    autoMinInteriorCoolingC = DEFAULT_MIN_INTERIOR_COOLING_C;
+float    autoMinOutsideCoolingC = DEFAULT_MIN_OUTSIDE_COOLING_C;
 
 bool     autoRegulationEnabled = false;
 bool     autoRegulationActive = false;
@@ -154,6 +166,70 @@ void jsonSetFloat(JsonDocument& doc, const char* key, float value) {
     }
 }
 
+float clampFloat(float value, float minValue, float maxValue, float fallback) {
+    if (isnan(value) || value < minValue || value > maxValue) return fallback;
+    return value;
+}
+
+uint16_t clampU16(uint32_t value, uint16_t minValue, uint16_t maxValue, uint16_t fallback) {
+    if (value < minValue || value > maxValue) return fallback;
+    return (uint16_t)value;
+}
+
+uint32_t minutesToMs(uint16_t minutes) {
+    return (uint32_t)minutes * 60UL * 1000UL;
+}
+
+void loadAutoConfig() {
+    autoWeatherLat = clampFloat(prefs.getFloat("wLat", DEFAULT_WEATHER_LAT), -90.0f, 90.0f, DEFAULT_WEATHER_LAT);
+    autoWeatherLon = clampFloat(prefs.getFloat("wLon", DEFAULT_WEATHER_LON), -180.0f, 180.0f, DEFAULT_WEATHER_LON);
+    autoWeatherRefreshMin = clampU16(prefs.getUShort("wRefMin", DEFAULT_WEATHER_REFRESH_MIN), 15, 1440, DEFAULT_WEATHER_REFRESH_MIN);
+    autoWriteCooldownMin = clampU16(prefs.getUShort("aCoolMin", DEFAULT_AUTO_WRITE_COOLDOWN_MIN), 1, 1440, DEFAULT_AUTO_WRITE_COOLDOWN_MIN);
+    autoManualOverrideMin = clampU16(prefs.getUShort("aHoldMin", DEFAULT_MANUAL_OVERRIDE_MIN), 0, 1440, DEFAULT_MANUAL_OVERRIDE_MIN);
+    autoTomorrowHotMarginC = clampFloat(prefs.getFloat("aHot", DEFAULT_TOMORROW_HOT_MARGIN_C), 0.0f, 10.0f, DEFAULT_TOMORROW_HOT_MARGIN_C);
+    autoNeedCoolingMarginC = clampFloat(prefs.getFloat("aNeed", DEFAULT_NEED_COOLING_MARGIN_C), 0.0f, 10.0f, DEFAULT_NEED_COOLING_MARGIN_C);
+    autoGoodDeltaC = clampFloat(prefs.getFloat("aDelta", DEFAULT_GOOD_DELTA_C), 0.0f, 15.0f, DEFAULT_GOOD_DELTA_C);
+    autoStrongDeltaC = clampFloat(prefs.getFloat("aStrong", DEFAULT_STRONG_DELTA_C), 0.0f, 20.0f, DEFAULT_STRONG_DELTA_C);
+    if (autoStrongDeltaC < autoGoodDeltaC) autoStrongDeltaC = autoGoodDeltaC;
+    autoMinInteriorCoolingC = clampFloat(prefs.getFloat("aMinIn", DEFAULT_MIN_INTERIOR_COOLING_C), 5.0f, 25.0f, DEFAULT_MIN_INTERIOR_COOLING_C);
+    autoMinOutsideCoolingC = clampFloat(prefs.getFloat("aMinOut", DEFAULT_MIN_OUTSIDE_COOLING_C), -10.0f, 25.0f, DEFAULT_MIN_OUTSIDE_COOLING_C);
+
+    Serial.printf("[AUTO] config delta=%.1f strong=%.1f hot=%.1f need=%.1f min_in=%.1f min_out=%.1f cooldown=%u hold=%u weather=%u lat=%.4f lon=%.4f\n",
+                  autoGoodDeltaC, autoStrongDeltaC, autoTomorrowHotMarginC,
+                  autoNeedCoolingMarginC, autoMinInteriorCoolingC,
+                  autoMinOutsideCoolingC, autoWriteCooldownMin,
+                  autoManualOverrideMin, autoWeatherRefreshMin,
+                  autoWeatherLat, autoWeatherLon);
+}
+
+void persistAutoConfig() {
+    prefs.putFloat("wLat", autoWeatherLat);
+    prefs.putFloat("wLon", autoWeatherLon);
+    prefs.putUShort("wRefMin", autoWeatherRefreshMin);
+    prefs.putUShort("aCoolMin", autoWriteCooldownMin);
+    prefs.putUShort("aHoldMin", autoManualOverrideMin);
+    prefs.putFloat("aHot", autoTomorrowHotMarginC);
+    prefs.putFloat("aNeed", autoNeedCoolingMarginC);
+    prefs.putFloat("aDelta", autoGoodDeltaC);
+    prefs.putFloat("aStrong", autoStrongDeltaC);
+    prefs.putFloat("aMinIn", autoMinInteriorCoolingC);
+    prefs.putFloat("aMinOut", autoMinOutsideCoolingC);
+}
+
+void addAutoConfigState(JsonDocument& doc) {
+    doc["auto_cfg_weather_lat"] = autoWeatherLat;
+    doc["auto_cfg_weather_lon"] = autoWeatherLon;
+    doc["auto_cfg_weather_refresh_min"] = autoWeatherRefreshMin;
+    doc["auto_cfg_write_cooldown_min"] = autoWriteCooldownMin;
+    doc["auto_cfg_manual_hold_min"] = autoManualOverrideMin;
+    doc["auto_cfg_tomorrow_hot_margin"] = autoTomorrowHotMarginC;
+    doc["auto_cfg_need_cooling_margin"] = autoNeedCoolingMarginC;
+    doc["auto_cfg_good_delta"] = autoGoodDeltaC;
+    doc["auto_cfg_strong_delta"] = autoStrongDeltaC;
+    doc["auto_cfg_min_interior"] = autoMinInteriorCoolingC;
+    doc["auto_cfg_min_outside"] = autoMinOutsideCoolingC;
+}
+
 uint32_t currentWriteDayKey() {
     time_t now = time(nullptr);
     if (now > 1700000000) {
@@ -188,6 +264,7 @@ void initWriteLimiter() {
     uint32_t storedDay = prefs.getUInt("writeDay", 0);
     writesToday = (storedDay == writeDayKey) ? prefs.getUShort("writes", 0) : 0;
     autoRegulationEnabled = prefs.getBool("autoReg", false);
+    loadAutoConfig();
     persistWriteCounter();
     Serial.printf("[DUCO] write guard day=%lu used=%u/%u clock=%s\n",
                   (unsigned long)writeDayKey, writesToday, DUCO_MAX_WRITES_PER_DAY,
@@ -245,8 +322,10 @@ uint32_t manualOverrideRemainingMs() {
 }
 
 void startManualOverride() {
-    autoManualOverrideUntilMs = millis() + MANUAL_OVERRIDE_MS;
-    Serial.println("[AUTO] manual override hold for 2h");
+    autoManualOverrideUntilMs = autoManualOverrideMin == 0
+        ? 0
+        : millis() + minutesToMs(autoManualOverrideMin);
+    Serial.printf("[AUTO] manual override hold for %u min\n", autoManualOverrideMin);
 }
 
 void clearManualOverride() {
@@ -272,8 +351,8 @@ bool fetchWeatherForecast() {
     HTTPClient http;
     WiFiClient weatherClient;
     String url = "http://api.open-meteo.com/v1/forecast"
-                 "?latitude=" + String(WEATHER_LAT, 4) +
-                 "&longitude=" + String(WEATHER_LON, 4) +
+                 "?latitude=" + String(autoWeatherLat, 4) +
+                 "&longitude=" + String(autoWeatherLon, 4) +
                  "&daily=temperature_2m_max,temperature_2m_min"
                  "&forecast_days=2&timezone=Europe%2FParis";
 
@@ -330,7 +409,7 @@ bool fetchWeatherForecast() {
 void maybeFetchWeatherForecast(bool force = false) {
     if (WiFi.status() != WL_CONNECTED) return;
     if (!force && lastWeatherFetchMs != 0 &&
-        millis() - lastWeatherFetchMs < WEATHER_REFRESH_MS) {
+        millis() - lastWeatherFetchMs < minutesToMs(autoWeatherRefreshMin)) {
         return;
     }
     fetchWeatherForecast();
@@ -401,13 +480,13 @@ void evaluateAutoRegulation(bool allowWrites) {
 
     float delta = duco.tempEta - duco.tempOda;
     bool tomorrowHot = forecastOk &&
-        forecastTomorrowMax >= duco.comfortTemp + TOMORROW_HOT_MARGIN_C;
+        forecastTomorrowMax >= duco.comfortTemp + autoTomorrowHotMarginC;
     bool needCooling = tomorrowHot ||
-        duco.tempEta >= duco.comfortTemp + NEED_COOLING_MARGIN_C;
-    bool goodDelta = delta >= GOOD_DELTA_C;
-    bool strongDelta = delta >= STRONG_DELTA_C;
-    bool coolingSafe = duco.tempEta > MIN_INTERIOR_COOLING_C &&
-        duco.tempOda > MIN_OUTSIDE_COOLING_C;
+        duco.tempEta >= duco.comfortTemp + autoNeedCoolingMarginC;
+    bool goodDelta = delta >= autoGoodDeltaC;
+    bool strongDelta = delta >= autoStrongDeltaC;
+    bool coolingSafe = duco.tempEta > autoMinInteriorCoolingC &&
+        duco.tempOda > autoMinOutsideCoolingC;
 
     if ((tomorrowHot || (!forecastOk && needCooling)) && goodDelta && coolingSafe) {
         targetBypass = DUCO_BYPASS_MODE_OPEN;
@@ -427,7 +506,7 @@ void evaluateAutoRegulation(bool allowWrites) {
         targetMode = DUCO_MODE_AUTO;
         shouldControl = true;
         autoRegulationAction = "insufficient_delta";
-        autoRegulationReason = "Delta inferieur a 3.0C";
+        autoRegulationReason = "Delta inferieur a " + String(autoGoodDeltaC, 1) + "C";
     } else if (!tomorrowHot && duco.tempEta <= duco.comfortTemp + 0.5f &&
                duco.tempOda <= duco.comfortTemp - 2.0f) {
         targetBypass = DUCO_BYPASS_MODE_SHUT;
@@ -459,7 +538,7 @@ void evaluateAutoRegulation(bool allowWrites) {
     if (!bypassDiff && !modeDiff) return;
 
     if (lastAutoWriteDecisionMs != 0 &&
-        millis() - lastAutoWriteDecisionMs < AUTO_MIN_WRITE_INTERVAL_MS) {
+        millis() - lastAutoWriteDecisionMs < minutesToMs(autoWriteCooldownMin)) {
         autoRegulationReason += ", attente cooldown";
         return;
     }
@@ -615,6 +694,17 @@ void mqttPublishState() {
     doc["prevision_ok"] = forecastOk;
     doc["erreur_prevision"] = forecastError;
     doc["pause_manuelle_active"] = manualOverrideActive();
+    doc["reglage_meteo_latitude"] = autoWeatherLat;
+    doc["reglage_meteo_longitude"] = autoWeatherLon;
+    doc["reglage_meteo_refresh_min"] = autoWeatherRefreshMin;
+    doc["reglage_auto_cooldown_min"] = autoWriteCooldownMin;
+    doc["reglage_pause_manuelle_min"] = autoManualOverrideMin;
+    doc["reglage_demain_chaud_marge"] = autoTomorrowHotMarginC;
+    doc["reglage_besoin_froid_marge"] = autoNeedCoolingMarginC;
+    doc["reglage_delta_ouverture"] = autoGoodDeltaC;
+    doc["reglage_delta_puissance_3"] = autoStrongDeltaC;
+    doc["reglage_temp_interieure_min"] = autoMinInteriorCoolingC;
+    doc["reglage_temp_exterieure_min"] = autoMinOutsideCoolingC;
 
     String json;
     serializeJson(doc, json);
@@ -775,6 +865,7 @@ void sendState(AsyncWebServerRequest* req) {
     jsonSetFloat(doc, "eha", duco.tempEha);
     addWriteStats(doc);
     addAutoRegulationState(doc);
+    addAutoConfigState(doc);
 
     String out;
     serializeJson(doc, out);
@@ -786,6 +877,46 @@ bool reserveHttpWrite(AsyncWebServerRequest* req) {
     if (reserveDucoWrite(reason)) return true;
     req->send(429, "text/plain", reason);
     return false;
+}
+
+bool parseFloatParam(AsyncWebServerRequest* req, const char* name,
+                     float& target, float minValue, float maxValue,
+                     String& error) {
+    if (!req->hasParam(name)) return true;
+    String value = req->getParam(name)->value();
+    if (value.length() == 0) {
+        error = String(name) + " vide";
+        return false;
+    }
+    char* end = nullptr;
+    float parsed = strtof(value.c_str(), &end);
+    if (end == value.c_str() || *end != '\0' || isnan(parsed) ||
+        parsed < minValue || parsed > maxValue) {
+        error = String(name) + " hors limites";
+        return false;
+    }
+    target = parsed;
+    return true;
+}
+
+bool parseU16Param(AsyncWebServerRequest* req, const char* name,
+                   uint16_t& target, uint16_t minValue, uint16_t maxValue,
+                   String& error) {
+    if (!req->hasParam(name)) return true;
+    String value = req->getParam(name)->value();
+    if (value.length() == 0) {
+        error = String(name) + " vide";
+        return false;
+    }
+    char* end = nullptr;
+    long parsed = strtol(value.c_str(), &end, 10);
+    if (end == value.c_str() || *end != '\0' ||
+        parsed < minValue || parsed > maxValue) {
+        error = String(name) + " hors limites";
+        return false;
+    }
+    target = (uint16_t)parsed;
+    return true;
 }
 
 void setupWeb() {
@@ -867,6 +998,70 @@ void setupWeb() {
     web.on("/api/clear_auto_hold", HTTP_POST, [](AsyncWebServerRequest* req) {
         if (!checkAuth(req)) return;
         clearManualOverride();
+        req->send(200, "text/plain", "OK");
+    });
+
+    web.on("/api/set_auto_config", HTTP_POST, [](AsyncWebServerRequest* req) {
+        if (!checkAuth(req)) return;
+        String error;
+
+        float weatherLat = autoWeatherLat;
+        float weatherLon = autoWeatherLon;
+        uint16_t weatherRefreshMin = autoWeatherRefreshMin;
+        uint16_t writeCooldownMin = autoWriteCooldownMin;
+        uint16_t manualHoldMin = autoManualOverrideMin;
+        float tomorrowHotMargin = autoTomorrowHotMarginC;
+        float needCoolingMargin = autoNeedCoolingMarginC;
+        float goodDelta = autoGoodDeltaC;
+        float strongDelta = autoStrongDeltaC;
+        float minInterior = autoMinInteriorCoolingC;
+        float minOutside = autoMinOutsideCoolingC;
+
+        bool ok =
+            parseFloatParam(req, "weather_lat", weatherLat, -90.0f, 90.0f, error) &&
+            parseFloatParam(req, "weather_lon", weatherLon, -180.0f, 180.0f, error) &&
+            parseU16Param(req, "weather_refresh_min", weatherRefreshMin, 15, 1440, error) &&
+            parseU16Param(req, "write_cooldown_min", writeCooldownMin, 1, 1440, error) &&
+            parseU16Param(req, "manual_hold_min", manualHoldMin, 0, 1440, error) &&
+            parseFloatParam(req, "tomorrow_hot_margin", tomorrowHotMargin, 0.0f, 10.0f, error) &&
+            parseFloatParam(req, "need_cooling_margin", needCoolingMargin, 0.0f, 10.0f, error) &&
+            parseFloatParam(req, "good_delta", goodDelta, 0.0f, 15.0f, error) &&
+            parseFloatParam(req, "strong_delta", strongDelta, 0.0f, 20.0f, error) &&
+            parseFloatParam(req, "min_interior", minInterior, 5.0f, 25.0f, error) &&
+            parseFloatParam(req, "min_outside", minOutside, -10.0f, 25.0f, error);
+
+        if (!ok) {
+            req->send(400, "text/plain", error);
+            return;
+        }
+        if (strongDelta < goodDelta) {
+            req->send(400, "text/plain", "strong_delta doit etre >= good_delta");
+            return;
+        }
+
+        bool weatherChanged = fabs(weatherLat - autoWeatherLat) > 0.0001f ||
+                              fabs(weatherLon - autoWeatherLon) > 0.0001f ||
+                              weatherRefreshMin != autoWeatherRefreshMin;
+
+        autoWeatherLat = weatherLat;
+        autoWeatherLon = weatherLon;
+        autoWeatherRefreshMin = weatherRefreshMin;
+        autoWriteCooldownMin = writeCooldownMin;
+        autoManualOverrideMin = manualHoldMin;
+        autoTomorrowHotMarginC = tomorrowHotMargin;
+        autoNeedCoolingMarginC = needCoolingMargin;
+        autoGoodDeltaC = goodDelta;
+        autoStrongDeltaC = strongDelta;
+        autoMinInteriorCoolingC = minInterior;
+        autoMinOutsideCoolingC = minOutside;
+        persistAutoConfig();
+
+        if (weatherChanged) {
+            lastWeatherFetchMs = 0;
+            forecastOk = false;
+            forecastError = "refresh en attente";
+        }
+        evaluateAutoRegulation(false);
         req->send(200, "text/plain", "OK");
     });
 

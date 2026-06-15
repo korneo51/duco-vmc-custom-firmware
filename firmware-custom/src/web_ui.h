@@ -349,6 +349,30 @@ static const char INDEX_HTML[] PROGMEM = R"HTML(
     color: var(--text);
     font-variant-numeric: tabular-nums;
   }
+  .settings-form {
+    display: grid;
+    gap: 12px;
+  }
+  .field-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+  .field-grid input {
+    width: 100%;
+    height: 40px;
+    padding: 0 9px;
+    color: var(--text);
+    background: var(--panel-2);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    font: inherit;
+  }
+  .hint {
+    color: var(--muted);
+    font-size: 0.78rem;
+    line-height: 1.35;
+  }
   @media (max-width: 780px) {
     main { padding: 14px; }
     header {
@@ -370,6 +394,9 @@ static const char INDEX_HTML[] PROGMEM = R"HTML(
     .settings-panel {
       width: 100%;
       border-left: 0;
+    }
+    .field-grid {
+      grid-template-columns: 1fr;
     }
   }
 </style>
@@ -508,6 +535,60 @@ static const char INDEX_HTML[] PROGMEM = R"HTML(
       </section>
 
       <section>
+        <h2>Réglages auto</h2>
+        <div class="settings-form">
+          <div class="field-grid">
+            <div>
+              <label for="auto_good_delta">Delta ouverture bypass (°C)</label>
+              <input type="number" id="auto_good_delta" min="0" max="15" step="0.1">
+            </div>
+            <div>
+              <label for="auto_strong_delta">Delta Puissance 3 (°C)</label>
+              <input type="number" id="auto_strong_delta" min="0" max="20" step="0.1">
+            </div>
+            <div>
+              <label for="auto_hot_margin">Demain chaud: consigne +</label>
+              <input type="number" id="auto_hot_margin" min="0" max="10" step="0.1">
+            </div>
+            <div>
+              <label for="auto_need_margin">Besoin froid: consigne +</label>
+              <input type="number" id="auto_need_margin" min="0" max="10" step="0.1">
+            </div>
+            <div>
+              <label for="auto_min_interior">Temp intérieure mini (°C)</label>
+              <input type="number" id="auto_min_interior" min="5" max="25" step="0.1">
+            </div>
+            <div>
+              <label for="auto_min_outside">Temp extérieure mini (°C)</label>
+              <input type="number" id="auto_min_outside" min="-10" max="25" step="0.1">
+            </div>
+            <div>
+              <label for="auto_cooldown_min">Cooldown auto (min)</label>
+              <input type="number" id="auto_cooldown_min" min="1" max="1440" step="1">
+            </div>
+            <div>
+              <label for="auto_hold_min">Pause manuelle (min)</label>
+              <input type="number" id="auto_hold_min" min="0" max="1440" step="1">
+            </div>
+            <div>
+              <label for="auto_weather_refresh_min">Refresh météo (min)</label>
+              <input type="number" id="auto_weather_refresh_min" min="15" max="1440" step="1">
+            </div>
+            <div>
+              <label for="auto_weather_lat">Latitude météo</label>
+              <input type="number" id="auto_weather_lat" min="-90" max="90" step="0.0001">
+            </div>
+            <div>
+              <label for="auto_weather_lon">Longitude météo</label>
+              <input type="number" id="auto_weather_lon" min="-180" max="180" step="0.0001">
+            </div>
+          </div>
+          <div class="hint">Ces réglages sont stockés dans l'ESP32 et ne consomment aucune écriture Duco.</div>
+          <button onclick="saveAutoConfig()">Enregistrer réglages auto</button>
+        </div>
+      </section>
+
+      <section>
         <h2>Système</h2>
         <div class="metric-grid">
           <div class="metric wide"><span>Numéro série</span><strong id="serial">...</strong></div>
@@ -565,6 +646,12 @@ function fmtPercent(v) {
 
 function fmtDays(v) {
   return (v == null || Number.isNaN(Number(v))) ? "-" : Number(v) + " j";
+}
+
+function setNumberInput(id, value, digits) {
+  const el = $(id);
+  if (!el || document.activeElement === el || value == null || Number.isNaN(Number(value))) return;
+  el.value = Number(value).toFixed(digits);
 }
 
 function fmtDurationSeconds(v) {
@@ -693,6 +780,17 @@ async function refresh() {
     $("manual_hold").className = "state-pill " + (s.manual_override_active ? "state-boost" : "state-auto");
     $("auto_toggle_btn").textContent = s.auto_regulation_enabled ? "Désactiver" : "Activer";
     $("auto_toggle_btn").dataset.enabled = s.auto_regulation_enabled ? "1" : "0";
+    setNumberInput("auto_good_delta", s.auto_cfg_good_delta, 1);
+    setNumberInput("auto_strong_delta", s.auto_cfg_strong_delta, 1);
+    setNumberInput("auto_hot_margin", s.auto_cfg_tomorrow_hot_margin, 1);
+    setNumberInput("auto_need_margin", s.auto_cfg_need_cooling_margin, 1);
+    setNumberInput("auto_min_interior", s.auto_cfg_min_interior, 1);
+    setNumberInput("auto_min_outside", s.auto_cfg_min_outside, 1);
+    setNumberInput("auto_cooldown_min", s.auto_cfg_write_cooldown_min, 0);
+    setNumberInput("auto_hold_min", s.auto_cfg_manual_hold_min, 0);
+    setNumberInput("auto_weather_refresh_min", s.auto_cfg_weather_refresh_min, 0);
+    setNumberInput("auto_weather_lat", s.auto_cfg_weather_lat, 4);
+    setNumberInput("auto_weather_lon", s.auto_cfg_weather_lon, 4);
 
     if (s.comfort != null) $("set_comfort").value = Number(s.comfort).toFixed(1);
     $("last").textContent = new Date().toLocaleTimeString();
@@ -744,6 +842,30 @@ function toggleAutoRegulation() {
 
 function clearAutoHold() {
   postCommand("/api/clear_auto_hold", "Pause manuelle levée");
+}
+
+function saveAutoConfig() {
+  const goodDelta = Number($("auto_good_delta").value);
+  const strongDelta = Number($("auto_strong_delta").value);
+  if (Number.isNaN(goodDelta) || Number.isNaN(strongDelta) || strongDelta < goodDelta) {
+    setStatus("Delta Puissance 3 doit être supérieur ou égal au delta d'ouverture", "warn-text");
+    return;
+  }
+
+  const params = new URLSearchParams({
+    good_delta: $("auto_good_delta").value,
+    strong_delta: $("auto_strong_delta").value,
+    tomorrow_hot_margin: $("auto_hot_margin").value,
+    need_cooling_margin: $("auto_need_margin").value,
+    min_interior: $("auto_min_interior").value,
+    min_outside: $("auto_min_outside").value,
+    write_cooldown_min: $("auto_cooldown_min").value,
+    manual_hold_min: $("auto_hold_min").value,
+    weather_refresh_min: $("auto_weather_refresh_min").value,
+    weather_lat: $("auto_weather_lat").value,
+    weather_lon: $("auto_weather_lon").value
+  });
+  postCommand("/api/set_auto_config?" + params.toString(), "Réglages auto enregistrés");
 }
 
 async function refreshStateNow() {

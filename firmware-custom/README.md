@@ -59,6 +59,8 @@ Jeedom/Home Assistant. La page affiche :
 - mode bypass `Auto` / `Ouvrir` / `Fermer`
 - numero de serie box, filtre restant et temps restant du mode courant
 - regulation auto free-cooling avec meteo du lendemain
+- reglages persistants de regulation auto : delta, seuils de temperature,
+  cooldown, pause manuelle, meteo
 - quota d'ecritures Duco du jour
 
 Refresh automatique toutes les 5 secondes.
@@ -128,7 +130,22 @@ decision courante.
 - `POST /api/set_comfort?value=<celsius>`
 - `POST /api/set_bypass_mode?value=0|1|2`
 - `POST /api/set_auto_regulation?enabled=0|1`
+- `POST /api/set_auto_config?...`
 - `POST /api/clear_auto_hold`
+
+`/api/set_auto_config` accepte les parametres optionnels suivants, sans
+consommer d'ecriture Duco :
+
+- `good_delta` : delta interieur/exterieur minimum pour ouvrir le bypass
+- `strong_delta` : delta pour passer en Puissance 3
+- `tomorrow_hot_margin` : demain chaud si max demain >= consigne + marge
+- `need_cooling_margin` : besoin froid si interieur >= consigne + marge
+- `min_interior` : securite temperature interieure minimale
+- `min_outside` : securite temperature exterieure minimale
+- `write_cooldown_min` : delai minimum entre deux decisions auto qui ecrivent
+- `manual_hold_min` : duree de pause apres commande manuelle
+- `weather_refresh_min` : intervalle de rafraichissement Open-Meteo
+- `weather_lat`, `weather_lon` : coordonnees de prevision
 
 Les anciennes routes sniffer/debug ont ete supprimees du firmware courant.
 

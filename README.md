@@ -25,6 +25,8 @@ engineering qui ont permis de valider les commandes Duco utilisees.
 - Lecture de la position physique du bypass.
 - Pilotage du mode bypass : auto, ferme force, ouvert force.
 - Regulation automatique free-cooling avec prevision meteo Open-Meteo.
+- Reglages de regulation modifiables dans l'interface web et stockes dans
+  l'ESP32.
 - OTA Arduino apres le premier flash USB.
 - Limiteur d'ecritures Duco integre : 200 ecritures/jour et 2 secondes minimum
   entre deux ecritures.
