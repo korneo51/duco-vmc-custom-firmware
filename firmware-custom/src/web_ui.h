@@ -32,16 +32,16 @@ static const char INDEX_HTML[] PROGMEM = R"HTML(
     color: var(--text);
   }
   main {
-    width: min(1040px, 100%);
+    width: min(1180px, 100%);
     margin: 0 auto;
-    padding: 18px;
+    padding: 12px;
   }
   header {
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 18px;
-    margin-bottom: 16px;
+    margin-bottom: 10px;
   }
   h1 {
     margin: 0;
@@ -93,22 +93,33 @@ static const char INDEX_HTML[] PROGMEM = R"HTML(
   }
   .layout {
     display: grid;
-    grid-template-columns: minmax(0, 1.28fr) minmax(320px, 0.72fr);
-    gap: 14px;
+    grid-template-columns: minmax(0, 0.9fr) minmax(560px, 1.1fr);
+    gap: 12px;
     align-items: start;
   }
   .stack {
     display: grid;
-    gap: 14px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+  .stack > section:first-child {
+    grid-row: 1 / span 2;
+  }
+  .stack > .status {
+    grid-column: 1 / -1;
   }
   section {
     background: var(--panel);
     border: 1px solid var(--line);
     border-radius: 8px;
-    padding: 16px;
+    padding: 12px;
   }
   h2 {
-    margin: 0 0 13px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin: 0 0 8px;
     font-size: 0.96rem;
     color: var(--muted);
     font-weight: 700;
@@ -116,11 +127,15 @@ static const char INDEX_HTML[] PROGMEM = R"HTML(
   .metric-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 10px;
+    gap: 8px;
+  }
+  .vent-grid,
+  .bypass-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
   .metric {
-    min-height: 64px;
-    padding: 10px 12px;
+    min-height: 50px;
+    padding: 7px 9px;
     background: var(--panel-2);
     border: 1px solid rgba(255,255,255,0.06);
     border-radius: 7px;
@@ -132,8 +147,8 @@ static const char INDEX_HTML[] PROGMEM = R"HTML(
   }
   .metric strong {
     display: block;
-    margin-top: 4px;
-    font-size: 1.05rem;
+    margin-top: 3px;
+    font-size: 1rem;
     font-variant-numeric: tabular-nums;
     overflow-wrap: anywhere;
   }
@@ -143,7 +158,7 @@ static const char INDEX_HTML[] PROGMEM = R"HTML(
   .controls {
     display: grid;
     grid-template-columns: minmax(170px, 1fr) auto;
-    gap: 10px;
+    gap: 8px;
     align-items: end;
   }
   label {
@@ -154,7 +169,7 @@ static const char INDEX_HTML[] PROGMEM = R"HTML(
   }
   input[type=number] {
     width: 100%;
-    height: 42px;
+    height: 38px;
     padding: 0 10px;
     color: var(--text);
     background: var(--panel-2);
@@ -165,15 +180,15 @@ static const char INDEX_HTML[] PROGMEM = R"HTML(
   .button-grid {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 10px;
-    margin-top: 12px;
+    gap: 8px;
+    margin-top: 8px;
   }
   .mode-grid {
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
   button {
-    min-height: 42px;
-    padding: 0 12px;
+    min-height: 38px;
+    padding: 0 10px;
     border: 0;
     border-radius: 6px;
     background: var(--accent);
@@ -193,7 +208,7 @@ static const char INDEX_HTML[] PROGMEM = R"HTML(
   }
   .status {
     min-height: 22px;
-    margin-top: 12px;
+    margin-top: 8px;
     color: var(--muted);
     font-size: 0.92rem;
   }
@@ -252,7 +267,7 @@ static const char INDEX_HTML[] PROGMEM = R"HTML(
     align-items: center;
     justify-content: space-between;
     gap: 12px;
-    padding: 16px 16px 0;
+    padding: 12px 12px 0;
   }
   .temp-title h2 { margin: 0; }
   .delta-chip {
@@ -266,7 +281,7 @@ static const char INDEX_HTML[] PROGMEM = R"HTML(
     font-variant-numeric: tabular-nums;
   }
   .schema-wrap {
-    padding: 8px 10px 12px;
+    padding: 6px 8px 8px;
   }
   svg {
     width: 100%;
@@ -291,12 +306,71 @@ static const char INDEX_HTML[] PROGMEM = R"HTML(
     stroke-linecap: square;
     stroke-linejoin: miter;
   }
+  .boost-compact {
+    display: grid;
+    grid-template-columns: 1fr 1fr auto;
+    gap: 8px;
+    align-items: end;
+    margin-top: 8px;
+  }
+  select {
+    width: 100%;
+    height: 38px;
+    padding: 0 9px;
+    color: var(--text);
+    background: var(--panel-2);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    font: inherit;
+  }
+  .auto-main {
+    display: grid;
+    gap: 8px;
+  }
+  .auto-summary {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+  .auto-chip {
+    min-height: 42px;
+    padding: 6px 8px;
+    background: var(--panel-2);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 7px;
+  }
+  .auto-chip span {
+    display: block;
+    color: var(--muted);
+    font-size: 0.78rem;
+  }
+  .auto-chip strong {
+    margin-top: 2px;
+    font-size: 0.92rem;
+  }
+  .auto-reason {
+    min-height: 34px;
+    padding: 6px 8px;
+  }
+  .auto-reason strong {
+    font-size: 0.9rem;
+  }
+  .auto-actions {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+  }
+  .mini-status {
+    color: var(--muted);
+    font-size: 0.78rem;
+    font-weight: 650;
+  }
   footer {
     display: flex;
     justify-content: space-between;
     gap: 14px;
     flex-wrap: wrap;
-    margin-top: 14px;
+    margin-top: 8px;
     padding: 0 2px;
     color: var(--muted);
     font-size: 0.78rem;
@@ -382,10 +456,16 @@ static const char INDEX_HTML[] PROGMEM = R"HTML(
     }
     .header-meta { justify-content: flex-start; }
     .layout,
+    .stack,
     .metric-grid,
     .controls,
     .button-grid,
-    .mode-grid {
+    .mode-grid,
+    .vent-grid,
+    .bypass-grid,
+    .boost-compact,
+    .auto-summary,
+    .auto-actions {
       grid-template-columns: 1fr;
     }
     section { padding: 14px; }
@@ -394,6 +474,9 @@ static const char INDEX_HTML[] PROGMEM = R"HTML(
     .settings-panel {
       width: 100%;
       border-left: 0;
+    }
+    .stack > section:first-child {
+      grid-row: auto;
     }
     .field-grid {
       grid-template-columns: 1fr;
@@ -451,12 +534,11 @@ static const char INDEX_HTML[] PROGMEM = R"HTML(
 
     <div class="stack">
       <section>
-        <h2>Ventilation</h2>
-        <div class="metric-grid">
+        <h2>Ventilation <span id="poll_state" class="mini-status">auto</span></h2>
+        <div class="metric-grid vent-grid">
           <div class="metric"><span>Mode</span><strong id="mode" class="state-pill state-auto">...</strong></div>
           <div class="metric"><span>Consigne</span><strong id="comfort">...</strong></div>
           <div class="metric"><span>Débit cible</span><strong id="flow">...</strong></div>
-          <div class="metric"><span>Actualisation</span><strong id="poll_state">auto</strong></div>
         </div>
 
         <div class="controls" style="margin-top: 14px;">
@@ -473,26 +555,30 @@ static const char INDEX_HTML[] PROGMEM = R"HTML(
           <button onclick="applyModeValue(9, 'Puissance 2')">Puissance 2</button>
           <button onclick="applyModeValue(10, 'Puissance 3')">Puissance 3</button>
         </div>
-        <div class="button-grid">
-          <button class="secondary" onclick="applyModeValue(4, 'Boost P1 15 min')">P1 15 min</button>
-          <button class="secondary" onclick="applyModeValue(5, 'Boost P2 15 min')">P2 15 min</button>
-          <button class="secondary" onclick="applyModeValue(6, 'Boost P3 15 min')">P3 15 min</button>
-        </div>
-        <div class="button-grid">
-          <button class="secondary" onclick="applyModeValue(132, 'Boost P1 30 min')">P1 30 min</button>
-          <button class="secondary" onclick="applyModeValue(133, 'Boost P2 30 min')">P2 30 min</button>
-          <button class="secondary" onclick="applyModeValue(134, 'Boost P3 30 min')">P3 30 min</button>
-        </div>
-        <div class="button-grid">
-          <button class="secondary" onclick="applyModeValue(196, 'Boost P1 45 min')">P1 45 min</button>
-          <button class="secondary" onclick="applyModeValue(197, 'Boost P2 45 min')">P2 45 min</button>
-          <button class="secondary" onclick="applyModeValue(198, 'Boost P3 45 min')">P3 45 min</button>
+        <div class="boost-compact">
+          <div>
+            <label for="boost_power">Boost puissance</label>
+            <select id="boost_power">
+              <option value="1">P1</option>
+              <option value="2">P2</option>
+              <option value="3" selected>P3</option>
+            </select>
+          </div>
+          <div>
+            <label for="boost_duration">Duree</label>
+            <select id="boost_duration">
+              <option value="15">15 min</option>
+              <option value="30">30 min</option>
+              <option value="45">45 min</option>
+            </select>
+          </div>
+          <button class="secondary" onclick="applyBoost()">Appliquer boost</button>
         </div>
       </section>
 
       <section>
         <h2>Bypass</h2>
-        <div class="metric-grid">
+        <div class="metric-grid bypass-grid">
           <div class="metric"><span>État</span><strong id="bypass" class="state-pill">...</strong></div>
           <div class="metric"><span>Ouverture</span><strong id="bypass_position">...</strong></div>
           <div class="metric"><span>Mode</span><strong id="bypass_mode" class="state-pill state-auto">...</strong></div>
@@ -501,6 +587,27 @@ static const char INDEX_HTML[] PROGMEM = R"HTML(
           <button class="secondary" onclick="applyBypassMode(0)">Auto</button>
           <button onclick="applyBypassMode(2)">Ouvrir</button>
           <button onclick="applyBypassMode(1)">Fermer</button>
+        </div>
+      </section>
+
+      <section>
+        <h2>Regulation auto</h2>
+        <div class="auto-main">
+          <div class="auto-summary">
+            <div class="auto-chip"><span>Activee</span><strong id="auto_enabled" class="state-pill">...</strong></div>
+            <div class="auto-chip"><span>Etat</span><strong id="auto_action" class="state-pill">...</strong></div>
+            <div class="auto-chip"><span>Prevision</span><strong id="forecast">...</strong></div>
+            <div class="auto-chip"><span>Pause</span><strong id="manual_hold">...</strong></div>
+          </div>
+          <div class="metric auto-reason">
+            <span>Raison</span>
+            <strong id="auto_reason">...</strong>
+          </div>
+          <div class="auto-actions">
+            <button id="auto_toggle_btn" onclick="toggleAutoRegulation()">Activer</button>
+            <button class="secondary" onclick="clearAutoHold()">Reprendre auto</button>
+            <button class="secondary" onclick="refreshStateNow()">Actualiser</button>
+          </div>
         </div>
       </section>
 
@@ -514,25 +621,6 @@ static const char INDEX_HTML[] PROGMEM = R"HTML(
         <h2 id="settings_title">Paramètres</h2>
         <button class="secondary header-button" data-no-disable="1" onclick="closeSettings()">Fermer</button>
       </div>
-
-      <section>
-        <h2>Régulation auto</h2>
-        <div class="metric-grid">
-          <div class="metric"><span>Activée</span><strong id="auto_enabled" class="state-pill">...</strong></div>
-          <div class="metric"><span>État</span><strong id="auto_action" class="state-pill">...</strong></div>
-          <div class="metric"><span>Prévision demain</span><strong id="forecast">...</strong></div>
-          <div class="metric"><span>Pause manuelle</span><strong id="manual_hold">...</strong></div>
-        </div>
-        <div class="metric" style="margin-top: 10px;">
-          <span>Raison</span>
-          <strong id="auto_reason">...</strong>
-        </div>
-        <div class="button-grid">
-          <button id="auto_toggle_btn" onclick="toggleAutoRegulation()">Activer</button>
-          <button class="secondary" onclick="clearAutoHold()">Reprendre auto</button>
-          <button class="secondary" onclick="refreshStateNow()">Actualiser</button>
-        </div>
-      </section>
 
       <section>
         <h2>Réglages auto</h2>
@@ -823,6 +911,18 @@ async function postCommand(url, okText) {
 
 function applyModeValue(mode, label) {
   postCommand("/api/set_mode?value=" + mode, label + " appliqué");
+}
+
+function applyBoost() {
+  const power = $("boost_power").value;
+  const duration = $("boost_duration").value;
+  const modes = {
+    "1-15": 4, "2-15": 5, "3-15": 6,
+    "1-30": 132, "2-30": 133, "3-30": 134,
+    "1-45": 196, "2-45": 197, "3-45": 198
+  };
+  const key = power + "-" + duration;
+  applyModeValue(modes[key], "Boost P" + power + " " + duration + " min");
 }
 
 function applyComfort() {
